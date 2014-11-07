@@ -7,6 +7,7 @@ Functions:
 - Compare-Soundex (compare two strings using soundex)
 - Get-PasmScore
 - Compare-PasmAlgorithms
+- Search-For
 
 Algorithms included:
 - Overlap Coefficient
