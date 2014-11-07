@@ -3,6 +3,9 @@ PASM
 
 PowerShell Approximate String Matching (PASM)
 
+Functions:
+- Compare-Soundex (compare two strings using soundex)
+
 Algorithms included:
 - Overlap Coefficient
 - Longest Common Substring
