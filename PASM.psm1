@@ -1,4 +1,23 @@
-﻿function Get-Intersection {
+﻿Add-Type -TypeDefinition @"
+   public enum PasmAlgorithm
+   {
+      OverlapCoefficient,
+      LongestCommonSubstring,
+      LongestCommonSubsequence,
+      Soundex,
+      HammingDistance,
+      RatcliffObershelpSimilarity,
+      JaccardIndex,
+      JaccardDistance,
+      SorensenDiceCoefficient,
+      SorensenDiceDistance,
+      JaroDistance,
+      JaroWinklerDistance,
+      LevenshteinDistance
+   }
+"@
+
+function Get-Intersection {
     [CmdletBinding()]
     param (
         [Parameter(Position = 0, Mandatory)]
@@ -347,7 +366,7 @@ Function Get-LongestCommonSubsequence {
         .DESCRIPTION
             Get the longest common subsequence between two strings.
         .EXAMPLE
-            Get-LongestCommonSubsequence -Source 'Pennsylvania' -Target 'pencilvaneya' -CaseSensitive
+            Get-LongestCommonSubsequence -String1 'Pennsylvania' -String2 'pencilvaneya' -CaseSensitive
         .LINK
             https://gallery.technet.microsoft.com/scriptcenter/Longest-common-subsequence-173c0f45
         .LINK
@@ -361,26 +380,26 @@ Function Get-LongestCommonSubsequence {
     Param (
         [Parameter(Position = 0, Mandatory)]
         [ValidateNotNullorEmpty()]
-        [string] $Source,
+        [string] $String1,
  
         [Parameter(Position = 1, Mandatory)]
         [ValidateNotNullorEmpty()]
-        [string] $Target,
+        [string] $String2,
     
         [Parameter()]
         [switch] $CaseSensitive
     )
  
     if (-not($CaseSensitive)) {
-        $Source = $Source.ToLowerInvariant()
-        $Target = $Target.ToLowerInvariant()
+        $String1 = $String1.ToLowerInvariant()
+        $String2 = $String2.ToLowerInvariant()
     }
    
-    $lengths = New-Object 'object[,]' ($Source.Length + 1), ($Target.Length + 1)
+    $lengths = New-Object 'object[,]' ($String1.Length + 1), ($String2.Length + 1)
   
-    for($i = 0; $i -lt $Source.length; $i++) {
-      for ($j = 0; $j -lt $Target.length; $j++) {
-        if ($Source[$i] -ceq $Target[$j]) {
+    for($i = 0; $i -lt $String1.length; $i++) {
+      for ($j = 0; $j -lt $String2.length; $j++) {
+        if ($String1[$i] -ceq $String2[$j]) {
           $lengths[($i+1),($j+1)] = $lengths[$i,$j] + 1
         } else {
           $lengths[($i+1),($j+1)] = [math]::max(($lengths[($i+1),$j]),($lengths[$i,($j+1)]))  
@@ -389,8 +408,8 @@ Function Get-LongestCommonSubsequence {
     }
   
     $lcs = @()
-    $x = $Source.length
-    $y = $Target.length
+    $x = $String1.length
+    $y = $String2.length
  
     while (($x -ne 0) -and ($y -ne 0)) {
         if ( $lengths[$x,$y] -eq $lengths[($x-1),$y]) {
@@ -400,8 +419,8 @@ Function Get-LongestCommonSubsequence {
             --$y
         }
         else {
-            if ($Source[($x-1)] -ceq $Target[($y-1)]) {
-                $lcs = ,($Source[($x-1)]) + $lcs
+            if ($String1[($x-1)] -ceq $String2[($y-1)]) {
+                $lcs = ,($String1[($x-1)]) + $lcs
             }
             --$x
             --$y
@@ -1113,4 +1132,68 @@ function Compare-Soundex {
     else {
         return $false
     }
+}
+
+function Get-PasmScore {
+    [CmdletBinding()]
+    param (
+        [Parameter(Position = 0, Mandatory)]
+        [ValidateNotNullOrEmpty()]
+        [string] $String1,
+
+        [Parameter(Position = 1, Mandatory)]
+        [ValidateNotNullOrEmpty()]
+        [string] $String2,
+
+        [Parameter()]
+        [switch] $CaseSensitive,
+
+        [Parameter()]
+        [PasmAlgorithm] $Algorithm = [PasmAlgorithm]::JaccardDistance
+    )
+
+    switch ($Algorithm) {
+        'OverlapCoefficient' {$score = ([Math]::Round((Get-OverlapCoefficient -String1 $String1 -String2 $String2 -CaseSensitive:$CaseSensitive) * 100))}
+        'LongestCommonSubstring' {$score = ([Math]::Round(((Get-LongestCommonSubstring -String1 $String1 -String2 $String2 -CaseSensitive:$CaseSensitive).Length / [Math]::Min($String1.Length,$String2.Length)) * 100))}
+        'LongestCommonSubsequence' {$score = ([Math]::Round((((Get-LongestCommonSubsequence -String1 $String1 -String2 $String2 -CaseSensitive:$CaseSensitive).count) / ([Math]::Min($String1.Length,$String2.Length))) * 100))}
+        'Soundex' {if (Compare-Soundex -String1 $String1 -String2 $String2) {$score = 100} else {$score = 0}} 
+        'HammingDistance' {$score = ([Math]::Round((Get-HammingDistanceEx -String1 $String1 -String2 $String2 -NormalizeOutput -CaseSensitive:$CaseSensitive) * 100))}
+        'RatcliffObershelpSimilarity' {$score = ([Math]::Round((Get-RatcliffObershelpSimilarity -String1 $String1 -String2 $String2 -CaseSensitive:$CaseSensitive) * 100))}
+        'JaccardIndex' {$score = ([Math]::Round((Get-JaccardIndex -String1 $String1 -String2 $String2 -CaseSensitive:$CaseSensitive) * 100))}
+        'JaccardDistance' {$score = ([Math]::Round((1 - (Get-JaccardDistance -String1 $String1 -String2 $String2 -CaseSensitive:$CaseSensitive)) * 100))}
+        'SorensenDiceCoefficient' {$score = ([Math]::Round((Get-SorensenDiceCoefficient -String1 $String1 -String2 $String2 -CaseSensitive:$CaseSensitive) * 100))}
+        'SorensenDiceDistance' {$score = ([Math]::Round((1 - (Get-SorensenDiceDistance -String1 $String1 -String2 $String2 -CaseSensitive:$CaseSensitive)) * 100))}
+        'JaroDistance' {$score = ([Math]::Round((Get-JaroWinklerDistance -String1 $String1 -String2 $String2 -CaseSensitive:$CaseSensitive -OnlyCalculateJaroDistance) * 100))}
+        'JaroWinklerDistance' {$score = ([Math]::Round((Get-JaroWinklerDistance -String1 $String1 -String2 $String2 -CaseSensitive:$CaseSensitive) * 100))}
+        'LevenshteinDistance' {$score = ([Math]::Round((Get-LevenshteinDistance -String1 $String1 -String2 $String2 -CaseSensitive:$CaseSensitive -NormalizeOutput) * 100))}
+    }
+
+    Write-Output $score
+}
+
+function Compare-PasmAlgorithms {
+    [CmdletBinding()]
+    param (
+        [Parameter(Position = 0, Mandatory)]
+        [ValidateNotNullOrEmpty()]
+        [string] $String1,
+
+        [Parameter(Position = 1, Mandatory)]
+        [ValidateNotNullOrEmpty()]
+        [string] $String2,
+
+        [Parameter()]
+        [switch] $CaseSensitive
+    )
+
+    foreach ($a in ([enum]::GetNames('PasmAlgorithm'))) {
+        $pasmScore = Get-PasmScore -String1 $String1 -String2 $String2 -CaseSensitive:$CaseSensitive -Algorithm $a
+        Write-Output (,([PSCustomObject] [Ordered] @{
+            String1 = $String1
+            String2 = $String2
+            Algorithm = $a
+            Score = $pasmScore
+        }))
+    }
+
 }

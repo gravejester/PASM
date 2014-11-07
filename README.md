@@ -5,6 +5,8 @@ PowerShell Approximate String Matching (PASM)
 
 Functions:
 - Compare-Soundex (compare two strings using soundex)
+- Get-PasmScore
+- Compare-PasmAlgorithms
 
 Algorithms included:
 - Overlap Coefficient
